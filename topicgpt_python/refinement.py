@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer, util
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def topic_pairs(topic_sent, all_pairs, threshold=0.5, num_pair=2):
+def topic_pairs(topic_sent, all_pairs, threshold=0.5, num_pair=1): # XHT change num_pair = 1 (original = 2); XHT 5/23/25: change this to .55
     """
     Return the most similar topic pairs and the pairs that have been prompted so far.
 
@@ -83,28 +83,29 @@ def merge_topics(
     """
     topic_sent = topics_root.to_topic_list(desc=True, count=False)
     new_pairs, all_pairs = topic_pairs(
-        topic_sent, all_pairs=[], threshold=0.5, num_pair=2
+        topic_sent, all_pairs=[], threshold=0.5, num_pair=1 # XHT: change this to num_pair 1 # XHT 5/23/25: change this to .55
     )
     if len(new_pairs) <= 1 and verbose:
         print("No topic pairs to be merged.")
 
     responses, orig_new = [], mapping
-
+    
     pattern_topic = regex.compile(
-        r"^\[(\d+)\]([\w\s\-',]+)[^:]*:([\w\s,\.\-\/;']+) \(([^)]+)\)$"
+        r"^\[(\d+)\]([\w\s/',()\-]+)[^:]*:([\w\s,\.\-\/;']+) \(([^)]+)\)$" # XHT: modified this to allow ',()- in topics
     )
-    pattern_original = regex.compile(r"\[(\d+)\]([\w\s\-',]+),?")
+    pattern_original = regex.compile(r"\[(\d+)\]([\w\s/',()\-]+),?") # XHT: modified this to allow ',()- in topics
 
     while len(new_pairs) > 1:
         refiner_prompt = refinement_prompt.format(Topics="\n".join(new_pairs))
         if verbose:
-            print(f"Prompting model to merge topics:\n{refiner_prompt}")
+            print(f"Prompting model to merge topics:\n{new_pairs}")
 
         try:
             response = api_client.iterative_prompt(
                 refiner_prompt, max_tokens, temperature, top_p
             )
             responses.append(response)
+            print(f"Response: {response}")
             merges = response.split("\n")
 
             for merge in merges:
@@ -135,12 +136,12 @@ def merge_topics(
             traceback.print_exc()
 
         new_pairs, all_pairs = topic_pairs(
-            topic_sent, all_pairs, threshold=0.5, num_pair=2
+            topic_sent, all_pairs, threshold=0.5, num_pair=1 # XHT: change this to num_pair 1 ## XHT 5/23/25: change this from 0.5 to .55
         )
     return responses, topics_root, orig_new
 
 
-def remove_topics(topics_root, verbose, threshold=0.01):
+def remove_topics(topics_root, verbose, threshold=0.01): # XHT 5/23/25 change threshold to 0
     """
     Remove low-frequency topics from topic tree.
 
@@ -261,7 +262,7 @@ def refine_topics(
     - None
     """
     api_client = APIClient(api=api, model=model)
-    max_tokens, temperature, top_p = 1000, 0.0, 1.0
+    max_tokens, temperature, top_p = 300, 0.0, 0.0 # XHT: change this from 1000, 0.0, 1.0
     topics_root = TopicTree().from_topic_list(topic_file, from_file=True)
     if verbose:
         print("-------------------")

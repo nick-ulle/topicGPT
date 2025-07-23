@@ -254,7 +254,7 @@ def generate_topic_lvl2(
     Returns: Root node of the topic tree
     """
     api_client = APIClient(api=api, model=model)
-    max_tokens, temperature, top_p = 1000, 0.0, 1.0
+    max_tokens, temperature, top_p = 300, 0.0, 0.0 # XHT: changed from 1000, 0, 1
 
     if verbose:
         print("-------------------")

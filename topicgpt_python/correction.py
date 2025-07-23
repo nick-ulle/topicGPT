@@ -28,8 +28,8 @@ def topic_parser(root_topics, df, verbose=False):
     """
     error, hallucinated = [], []
     valid_topics = set(root_topics.get_root_descendants_name())
-    topic_pattern = re.compile(r"\[\d\] [\w\s\-'\&]+")
-    strip_pattern = re.compile(r"^[^a-zA-Z]+|[^a-zA-Z]+$")
+    topic_pattern = re.compile(r"\[\d\] [\w\s\-'\&,()/]+") # XHT: allow ampersand and add the usual ([\w\s/',()-]+) --- note only checks the topic name 
+    strip_pattern = re.compile(r"^[^a-zA-Z]+|[^a-zA-Z)]+$") # XHT: change so it does not strip () -- previously r"^[^a-zA-Z()]+|[^a-zA-Z)]+$"
 
     for i, response in enumerate(df.responses.tolist()):
         extracted_topics = [
@@ -102,7 +102,7 @@ def correct(
                 doc = api_client.truncate(doc, max_doc_len)
 
         try:
-            msg = f"Previously, this document was assigned to: {df.at[i, 'responses']}. Please reassign it to an existing topic in the hierarchy."
+            msg = f"Previously, this document was assigned to: {df.at[i, 'responses']}. Please reassign it to an existing topic in the list."
             prompt = correction_prompt.format(
                 Document=doc, tree=all_topics, Message=msg
             )
@@ -198,7 +198,7 @@ def correct_topics(
     - verbose: Print verbose output
     """
     api_client = APIClient(api=api, model=model)
-    max_tokens, temperature, top_p = 1000, 0.6, 0.9
+    max_tokens, temperature, top_p = 1000, 0.0, 0.0 # XHT: change from 0.6, 0.9
     context_len = (
         128000
         if model not in ["gpt-3.5-turbo", "gpt-4"]
@@ -243,6 +243,9 @@ def correct_topics(
                 correction_prompt,
                 context_len,
                 reprompt_idx,
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
                 verbose=verbose,
             )
         df.to_json(output_path, lines=True, orient="records")
